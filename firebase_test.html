@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔥 Test Firebase - Master Móvil</title>
+    
+    <!-- Firebase SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            min-height: 100vh;
+            color: #d4af37;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            border-radius: 20px;
+            padding: 40px;
+            border: 2px solid #d4af37;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #d4af37;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .status-card {
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .status-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .status-message {
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .success {
+            border-color: #2ecc71;
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+        }
+
+        .error {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+
+        .warning {
+            border-color: #f39c12;
+            background: rgba(243, 156, 18, 0.1);
+            color: #f39c12;
+        }
+
+        .loading {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+
+        .test-btn {
+            background: linear-gradient(135deg, #d4af37 0%, #f1c40f 100%);
+            color: #1a1a1a;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .test-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .test-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .config-section {
+            background: rgba(212, 175, 55, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .config-section h3 {
+            color: #d4af37;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .config-section pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 14px;
+            color: #f8f8f2;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(212, 175, 55, 0.3);
+            border-top: 4px solid #d4af37;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .result-item {
+            background: rgba(212, 175, 55, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .result-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .result-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #d4af37;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">🔥 Test de Conexión Firebase</div>
+        <div class="subtitle">Verificación de Sincronización Master Móvil</div>
+
+        <div class="config-section">
+            <h3>📋 Configuración Actual</h3>
+            <pre id="configDisplay">
+// ⚠️ CONFIGURA TU FIREBASE AQUÍ
+const firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    authDomain: "TU_PROYECTO.firebaseapp.com",
+    databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
+    projectId: "TU_PROYECTO",
+    storageBucket: "TU_PROYECTO.appspot.com",
+    messagingSenderId: "TU_SENDER_ID",
+    appId: "TU_APP_ID"
+};
+            </pre>
+        </div>
+
+        <div class="status-card loading" id="connectionStatus">
+            <div class="spinner"></div>
+            <div class="status-title">🔄 Verificando Conexión...</div>
+            <div class="status-message">Intentando conectar con Firebase...</div>
+        </div>
+
+        <div id="testResults" style="display: none;">
+            <div class="result-grid">
+                <div class="result-item">
+                    <div class="result-label">Estado de Conexión</div>
+                    <div class="result-value" id="connectionResult">Verificando...</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Proyecto ID</div>
+                    <div class="result-value" id="projectId">--</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Database URL</div>
+                    <div class="result-value" id="databaseUrl">--</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Credenciales Encontradas</div>
+                    <div class="result-value" id="credentialsCount">0</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Comercios Encontrados</div>
+                    <div class="result-value" id="commercesCount">0</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Validaciones Encontradas</div>
+                    <div class="result-value" id="validationsCount">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-btn" onclick="testWriteData()" id="writeTestBtn">
+            ✍️ Test de Escritura
+        </div>
+        <div class="test-btn" onclick="testReadData()" id="readTestBtn">
+            📖 Test de Lectura
+        </div>
+        <div class="test-btn" onclick="initializeDefaultData()" id="initDataBtn">
+            🎯 Inicializar Datos de Prueba
+        </div>
+
+    </div>
+
+    <script>
+        // 🔥 COLOCA AQUÍ TU CONFIGURACIÓN FIREBASE REAL
+        const firebaseConfig = {
+            apiKey: "AIzaSyAUM0tIPiCfcEnLbcK8JPZMBBIpY89wlV0",
+            authDomain: "master-movil-credenciales.firebaseapp.com",
+            databaseURL: "https://master-movil-credenciales-default-rtdb.firebaseio.com",
+            projectId: "master-movil-credenciales",
+            storageBucket: "master-movil-credenciales.firebasestorage.app",
+            messagingSenderId: "30682645748",
+            appId: "1:30682645748:web:7318cb15d2baa87f6b0aa1"
+        };
+
+        let db;
+        let isConnected = false;
+
+        // Función principal de inicialización
+        async function initializeFirebase() {
+            try {
+                // Mostrar configuración actual
+                document.getElementById('configDisplay').textContent = 
+                    'const firebaseConfig = ' + JSON.stringify(firebaseConfig, null, 2) + ';';
+
+                // Inicializar Firebase
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                
+                // Test de conexión
+                await testConnection();
+                
+            } catch (error) {
+                showConnectionStatus('error', '❌ Error de Configuración', 
+                    `Error al conectar: ${error.message}\n\n` +
+                    '🛠️ Soluciones:\n' +
+                    '1. Verifica tu configuración Firebase\n' +
+                    '2. Asegúrate de que Realtime Database esté habilitado\n' +
+                    '3. Revisa las reglas de seguridad');
+            }
+        }
+
+        async function testConnection() {
+            try {
+                // Test de referencia básica
+                const testRef = db.ref('.info/connected');
+                
+                testRef.on('value', async (snapshot) => {
+                    if (snapshot.val() === true) {
+                        isConnected = true;
+                        showConnectionStatus('success', '✅ Conexión Exitosa', 
+                            '🎉 Firebase conectado correctamente\n' +
+                            '📡 Base de datos en tiempo real activa\n' +
+                            '🔐 Permisos de lectura/escritura verificados');
+                        
+                        // Mostrar información del proyecto
+                        document.getElementById('projectId').textContent = firebaseConfig.projectId;
+                        document.getElementById('databaseUrl').textContent = firebaseConfig.databaseURL.split('//')[1];
+                        document.getElementById('testResults').style.display = 'block';
+                        
+                        // Cargar datos existentes
+                        await loadExistingData();
+                        
+                    } else {
+                        showConnectionStatus('warning', '⚠️ Desconectado', 
+                            'La conexión a Firebase se ha perdido.\n' +
+                            'Verificando reconexión automática...');
+                    }
+                });
+
+            } catch (error) {
+                showConnectionStatus('error', '❌ Test de Conexión Fallido', 
+                    `Error en test: ${error.message}\n\n` +
+                    '🔧 Posibles causas:\n' +
+                    '• Configuración incorrecta\n' +
+                    '• Realtime Database no habilitado\n' +
+                    '• Reglas de seguridad muy restrictivas');
+            }
+        }
+
+        async function loadExistingData() {
+            try {
+                // Contar credenciales
+                const credentialsSnapshot = await db.ref('credenciales').once('value');
+                const credentialsData = credentialsSnapshot.val() || {};
+                document.getElementById('credentialsCount').textContent = Object.keys(credentialsData).length;
+
+                // Contar comercios
+                const commercesSnapshot = await db.ref('comercios').once('value');
+                const commercesData = commercesSnapshot.val() || {};
+                document.getElementById('commercesCount').textContent = Object.keys(commercesData).length;
+
+                // Contar validaciones
+                const validationsSnapshot = await db.ref('validaciones').once('value');
+                const validationsData = validationsSnapshot.val() || {};
+                document.getElementById('validationsCount').textContent = Object.keys(validationsData).length;
+
+                console.log('📊 Datos existentes:', {
+                    credenciales: credentialsData,
+                    comercios: commercesData,
+                    validaciones: validationsData
+                });
+
+            } catch (error) {
+                console.error('Error cargando datos existentes:', error);
+            }
+        }
+
+        async function testWriteData() {
+            if (!isConnected) {
+                alert('❌ No hay conexión con Firebase');
+                return;
+            }
+
+            const writeBtn = document.getElementById('writeTestBtn');
+            writeBtn.textContent = '⏳ Escribiendo...';
+            writeBtn.disabled = true;
+
+            try {
+                const testData = {
+                    timestamp: Date.now(),
+                    message: 'Test de escritura exitoso',
+                    date: new Date().toISOString()
+                };
+
+                await db.ref('test/write-test').set(testData);
+                
+                writeBtn.textContent = '✅ Escritura Exitosa';
+                writeBtn.style.background = '#2ecc71';
+                
+                setTimeout(() => {
+                    writeBtn.textContent = '✍️ Test de Escritura';
+                    writeBtn.style.background = 'linear-gradient(135deg, #d4af37 0%, #f1c40f 100%)';
+                    writeBtn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                writeBtn.textContent = '❌ Error de Escritura';
+                writeBtn.style.background = '#e74c3c';
+                console.error('Error en test de escritura:', error);
+                
+                setTimeout(() => {
+                    writeBtn.textContent = '✍️ Test de Escritura';
+                    writeBtn.style.background = 'linear-gradient(135deg, #d4af37 0%, #f1c40f 100%)';
+                    writeBtn.disabled = false;
+                }, 2000);
+            }
+        }
+
+        async function testReadData() {
+            if (!isConnected) {
+                alert('❌ No hay conexión con Firebase');
+                return;
+            }
+
+            const readBtn = document.getElementById('readTestBtn');
+            readBtn.textContent = '⏳ Leyendo...';
+            readBtn.disabled = true;
+
+            try {
+                const snapshot = await db.ref('test').once('value');
+                const data = snapshot.val();
+                
+                readBtn.textContent = '✅ Lectura Exitosa';
+                readBtn.style.background = '#2ecc71';
+                
+                console.log('📖 Datos leídos:', data);
+                
+                setTimeout(() => {
+                    readBtn.textContent = '📖 Test de Lectura';
+                    readBtn.style.background = 'linear-gradient(135deg, #d4af37 0%, #f1c40f 100%)';
+                    readBtn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                readBtn.textContent = '❌ Error de Lectura';
+                readBtn.style.background = '#e74c3c';
+                console.error('Error en test de lectura:', error);
+                
+                setTimeout(() => {
+                    readBtn.textContent = '📖 Test de Lectura';
+                    readBtn.style.background = 'linear-gradient(135deg, #d4af37 0%, #f1c40f 100%)';
+                    readBtn.disabled = false;
+                }, 2000);
+            }
+        }
+
+        async function initializeDefaultData() {
+            if (!isConnected) {
+                alert('❌ No hay conexión con Firebase');
+                return;
+            }
+
+            const initBtn = document.getElementById('initDataBtn');
+            initBtn.textContent = '⏳ Inicializando...';
+            initBtn.disabled = true;
+
+            try {
+                // Datos de prueba para credenciales
+                const testCredentials = {
+                    'MM250805001': {
+                        nombre: 'Juan Pérez González',
+                        rut: '12.345.678-9',
+                        curso: 'Licencia Clase B',
+                        validoDesde: '05/08/2025',
+                        validoHasta: '05/08/2026',
+                        fechaEmision: '05/08/2025',
+                        estado: 'Activa',
+                        timestamp: Date.now()
+                    },
+                    'MM250805002': {
+                        nombre: 'María García López',
+                        rut: '23.456.789-0',
+                        curso: 'Licencia Clase A2',
+                        validoDesde: '05/08/2025',
+                        validoHasta: '05/08/2026',
+                        fechaEmision: '05/08/2025',
+                        estado: 'Activa',
+                        timestamp: Date.now()
+                    }
+                };
+
+                // Datos de prueba para comercios
+                const testCommerces = {
+                    'REST001': { code: "REST001", name: "Restaurante El Buen Sabor", category: "Restaurantes", discount: 15, active: true },
+                    'FASH002': { code: "FASH002", name: "Tienda Fashion Style", category: "Ropa", discount: 20, active: true },
+                    'TECH003': { code: "TECH003", name: "TechStore Viña", category: "Tecnología", discount: 10, active: true }
+                };
+
+                // Escribir datos de prueba
+                await Promise.all([
+                    db.ref('credenciales').set(testCredentials),
+                    db.ref('comercios').set(testCommerces)
+                ]);
+
+                initBtn.textContent = '✅ Datos Inicializados';
+                initBtn.style.background = '#2ecc71';
+                
+                // Recargar contadores
+                await loadExistingData();
+                
+                setTimeout(() => {
+                    initBtn.textContent = '🎯 Inicializar Datos de Prueba';
+                    initBtn.style.background = 'linear-gradient(135deg, #d4af37 0%, #f1c40f 100%)';
+                    initBtn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                initBtn.textContent = '❌ Error de Inicialización';
+                initBtn.style.background = '#e74c3c';
+                console.error('Error inicializando datos:', error);
+                
+                setTimeout(() => {
+                    initBtn.textContent = '🎯 Inicializar Datos de Prueba';
+                    initBtn.style.background = 'linear-gradient(135deg, #d4af37 0%, #f1c40f 100%)';
+                    initBtn.disabled = false;
+                }, 2000);
+            }
+        }
+
+        function showConnectionStatus(type, title, message) {
+            const statusCard = document.getElementById('connectionStatus');
+            statusCard.className = `status-card ${type}`;
+            statusCard.innerHTML = `
+                ${type === 'loading' ? '<div class="spinner"></div>' : ''}
+                <div class="status-title">${title}</div>
+                <div class="status-message">${message}</div>
+            `;
+        }
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Iniciando test de Firebase...');
+            initializeFirebase();
+        });
+
+        // Exponer funciones para debugging
+        window.FirebaseTest = {
+            getConfig: () => firebaseConfig,
+            isConnected: () => isConnected,
+            testConnection: testConnection,
+            testWrite: testWriteData,
+            testRead: testReadData
+        };
+    </script>
+</body>
+</html>

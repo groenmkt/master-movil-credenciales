@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Master Móvil Firebase</title>
+    
+    <!-- Firebase SDK v8 (Compatible) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            min-height: 100vh;
+            color: #d4af37;
+        }
+
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #d4af37;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 2px solid #d4af37;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .connection-status {
+            background: rgba(46, 204, 113, 0.1);
+            border: 2px solid #2ecc71;
+            color: #2ecc71;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-top: 15px;
+            display: inline-block;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(231, 76, 60, 0.1);
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .real-time-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            padding: 8px 15px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid #2ecc71;
+        }
+
+        .real-time-indicator.syncing {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+            border-color: #f1c40f;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 15px;
+            padding: 5px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px 20px;
+            background: transparent;
+            color: #d4af37;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #d4af37 0%, #f1c40f 100%);
+            color: #1a1a1a;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #d4af37;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .stat-card.updated::before {
+            left: 100%;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #d4af37;
+            display: block;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: rgba(212, 175, 55, 0.8);
+            position: relative;
+            z-index: 2;
+        }
+
+        .section {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 2px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .section h3 {
+            color: #d4af37;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .controls-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 15px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-radius: 10px;
+            color: #d4af37;
+            font-size: 14px;
+        }
+
+        .search-box::placeholder {
+            color: rgba(212, 175, 55, 0.6);
+        }
+
+        .filter-btn {
+            padding: 10px 15px;
+            background: rgba(212, 175, 55, 0.2);
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-radius: 8px;
+            color: #d4af37;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .filter-btn.active {
+            background: #d4af37;
+            color: #1a1a1a;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .data-table th {
+            background: rgba(212, 175, 55, 0.2);
+            color: #d4af37;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table td {
+            color: rgba(212, 175, 55, 0.9);
+        }
+
+        .data-table tr {
+            transition: all 0.3s ease;
+        }
+
+        .data-table tr:hover {
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .data-table tr.updated {
+            background: rgba(46, 204, 113, 0.1);
+            animation: fadeOut 2s ease forwards;
+        }
+
+        @keyframes fadeOut {
+            0% { background: rgba(46, 204, 113, 0.2); }
+            100% { background: transparent; }
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .status-active {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            border: 1px solid #2ecc71;
+        }
+
+        .status-inactive {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
+        }
+
+        .status-expiring {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+            border: 1px solid #f1c40f;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin: 0 2px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn-edit {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-toggle {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-extend {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            opacity: 0.8;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alerts-section {
+            background: rgba(241, 196, 15, 0.1);
+            border: 2px solid #f1c40f;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .alert-item {
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(241, 196, 15, 0.1);
+            border-left: 4px solid #f1c40f;
+            border-radius: 5px;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .benefit-card {
+            background: rgba(212, 175, 55, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-5px);
+            border-color: #d4af37;
+        }
+
+        .benefit-title {
+            color: #d4af37;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .benefit-discount {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2ecc71;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            margin: 5% auto;
+            padding: 30px;
+            border: 2px solid #d4af37;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            color: #d4af37;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            color: #d4af37;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close:hover {
+            color: #f1c40f;
+            transform: scale(1.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #d4af37;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-radius: 8px;
+            color: #d4af37;
+            font-size: 14px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #d4af37;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #d4af37 0%, #f1c40f 100%);
+            color: #1a1a1a;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .save-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .save-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1001;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+        }
+
+        .notification.success {
+            background: #2ecc71;
+        }
+
+        .notification.error {
+            background: #e74c3c;
+        }
+
+        .notification.warning {
+            background: #f39c12;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(212, 175, 55, 0.3);
+            border-top: 4px solid #d4af37;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(212, 175, 55, 0.6);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .admin-container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .data-table {
+                font-size: 12px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 8px;
+            }
+            
+            .real-time-indicator {
+                position: static;
+                margin-top: 10px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="admin-container">
+        <div class="header">
+            <div class="real-time-indicator" id="realTimeIndicator">🔄 Sincronizando...</div>
+            <h1>🎓 Panel de Administración Firebase</h1>
+            <p>Sistema de Gestión Master Móvil - Tiempo Real</p>
+            <div class="connection-status" id="connectionStatus">
+                🔄 Conectando a Firebase...
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="changeTab('dashboard', this)">📊 Dashboard</button>
+            <button class="tab" onclick="changeTab('credentials', this)">📄 Credenciales</button>
+            <button class="tab" onclick="changeTab('benefits', this)">🎁 Comercios</button>
+            <button class="tab" onclick="changeTab('validations', this)">✅ Validaciones</button>
+            <button class="tab" onclick="changeTab('analytics', this)">📈 Análisis</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-dashboard">
+                <div class="stat-card" id="totalStudentsCard">
+                    <span class="stat-number" id="totalStudents">0</span>
+                    <div class="stat-label">Credenciales Totales</div>
+                </div>
+                <div class="stat-card" id="activeStudentsCard">
+                    <span class="stat-number" id="activeStudents">0</span>
+                    <div class="stat-label">Credenciales Activas</div>
+                </div>
+                <div class="stat-card" id="totalBenefitsCard">
+                    <span class="stat-number" id="totalBenefits">0</span>
+                    <div class="stat-label">Comercios Afiliados</div>
+                </div>
+                <div class="stat-card" id="expiringCredentialsCard">
+                    <span class="stat-number" id="expiringCredentials">0</span>
+                    <div class="stat-label">Por Vencer (30 días)</div>
+                </div>
+                <div class="stat-card" id="totalValidationsCard">
+                    <span class="stat-number" id="totalValidations">0</span>
+                    <div class="stat-label">Validaciones Totales</div>
+                </div>
+                <div class="stat-card" id="todayValidationsCard">
+                    <span class="stat-number" id="todayValidations">0</span>
+                    <div class="stat-label">Validaciones Hoy</div>
+                </div>
+            </div>
+
+            <div class="alerts-section">
+                <h3>🚨 Alertas del Sistema</h3>
+                <div id="alertsList">
+                    <div class="alert-item">
+                        <strong>🔄 Cargando sistema...</strong><br>
+                        Conectando con Firebase Cloud Database...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Credentials Tab -->
+        <div id="credentials" class="tab-content">
+            <div class="section">
+                <h3>📄 Gestión de Credenciales en Tiempo Real</h3>
+                
+                <div class="controls-bar">
+                    <input type="text" class="search-box" placeholder="🔍 Buscar por nombre, RUT o ID..." id="credentialsSearch">
+                    <button class="filter-btn active" onclick="filterCredentials('all')" id="filterAll">Todas</button>
+                    <button class="filter-btn" onclick="filterCredentials('active')" id="filterActive">Activas</button>
+                    <button class="filter-btn" onclick="filterCredentials('inactive')" id="filterInactive">Inactivas</button>
+                    <button class="filter-btn" onclick="filterCredentials('expiring')" id="filterExpiring">Por Vencer</button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Estudiante</th>
+                                <th>RUT</th>
+                                <th>Curso</th>
+                                <th>Vigencia</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="credentialsTableBody">
+                            <tr>
+                                <td colspan="7" class="empty-state">
+                                    <div class="empty-state-icon">🔄</div>
+                                    <div>Cargando credenciales desde Firebase...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benefits Tab -->
+        <div id="benefits" class="tab-content">
+            <div class="section">
+                <h3>🎁 Gestión de Comercios Afiliados</h3>
+                
+                <div class="controls-bar">
+                    <input type="text" class="search-box" placeholder="🔍 Buscar comercios..." id="commercesSearch">
+                    <button class="action-btn btn-edit" onclick="addCommerce()">➕ Nuevo Comercio</button>
+                </div>
+                
+                <div class="benefits-grid" id="benefitsGrid">
+                    <div class="benefit-card">
+                        <div class="benefit-title">🔄 Cargando comercios...</div>
+                        <div style="text-align: center; color: rgba(212, 175, 55, 0.7);">
+                            Sincronizando con Firebase
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validations Tab -->
+        <div id="validations" class="tab-content">
+            <div class="section">
+                <h3>✅ Registro de Validaciones</h3>
+                
+                <div class="controls-bar">
+                    <input type="text" class="search-box" placeholder="🔍 Buscar validaciones..." id="validationsSearch">
+                    <button class="filter-btn active" onclick="filterValidations('all')" id="validationsFilterAll">Todas</button>
+                    <button class="filter-btn" onclick="filterValidations('today')" id="validationsFilterToday">Hoy</button>
+                    <button class="filter-btn" onclick="filterValidations('week')" id="validationsFilterWeek">Esta Semana</button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th>Estudiante</th>
+                                <th>Comercio</th>
+                                <th>Descuento</th>
+                                <th>Credencial ID</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="validationsTableBody">
+                            <tr>
+                                <td colspan="6" class="empty-state">
+                                    <div class="empty-state-icon">🔄</div>
+                                    <div>Cargando validaciones desde Firebase...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+            <div class="section">
+                <h3>📈 Análisis de Datos en Tiempo Real</h3>
+                
+                <div class="stats-dashboard">
+                    <div class="stat-card">
+                        <span class="stat-number" id="totalValidationsAll">0</span>
+                        <div class="stat-label">Total Validaciones</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="validationsToday">0</span>
+                        <div class="stat-label">Validaciones Hoy</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="topCommerce">-</span>
+                        <div class="stat-label">Comercio Más Popular</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="avgValidationsPerDay">0</span>
+                        <div class="stat-label">Promedio Diario</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h4 style="color: #d4af37; margin-bottom: 15px;">🏆 Ranking de Comercios</h4>
+                    <div id="commerceRanking">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <div>Calculando estadísticas...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar credencial -->
+    <div id="editCredentialModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Editar Credencial</h3>
+                <span class="close" onclick="closeModal('editCredentialModal')">&times;</span>
+            </div>
+            <form id="editCredentialForm">
+                <div class="form-group">
+                    <label for="editName">Nombre Completo:</label>
+                    <input type="text" id="editName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editRut">RUT:</label>
+                    <input type="text" id="editRut" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCourse">Curso:</label>
+                    <input type="text" id="editCourse" required>
+                </div>
+                <div class="form-group">
+                    <label for="editValidUntil">Válido Hasta:</label>
+                    <input type="date" id="editValidUntil" required>
+                </div>
+                <div class="form-group">
+                    <label for="editStatus">Estado:</label>
+                    <select id="editStatus">
+                        <option value="Activa">Activa</option>
+                        <option value="Inactiva">Inactiva</option>
+                    </select>
+                </div>
+                <button type="submit" class="save-btn" id="saveCredentialBtn">💾 Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para editar comercio -->
+    <div id="editCommerceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="commerceModalTitle">✏️ Editar Comercio</h3>
+                <span class="close" onclick="closeModal('editCommerceModal')">&times;</span>
+            </div>
+            <form id="editCommerceForm">
+                <div class="form-group">
+                    <label for="editCommerceName">Nombre del Comercio:</label>
+                    <input type="text" id="editCommerceName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCommerceCode">Código:</label>
+                    <input type="text" id="editCommerceCode" required maxlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="editCommerceCategory">Categoría:</label>
+                    <input type="text" id="editCommerceCategory" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCommerceDiscount">Descuento (%):</label>
+                    <input type="number" id="editCommerceDiscount" min="1" max="100" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCommerceActive">Estado:</label>
+                    <select id="editCommerceActive">
+                        <option value="true">Activo</option>
+                        <option value="false">Inactivo</option>
+                    </select>
+                </div>
+                <button type="submit" class="save-btn" id="saveCommerceBtn">💾 Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 🔥 CONFIGURACIÓN FIREBASE - TU PROYECTO REAL
+        const firebaseConfig = {
+            apiKey: "AIzaSyAUM0tIPiCfcEnLbcK8JPZMBBIpY89wlV0",
+            authDomain: "master-movil-credenciales.firebaseapp.com",
+            databaseURL: "https://master-movil-credenciales-default-rtdb.firebaseio.com",
+            projectId: "master-movil-credenciales",
+            storageBucket: "master-movil-credenciales.firebasestorage.app",
+            messagingSenderId: "30682645748",
+            appId: "1:30682645748:web:7318cb15d2baa87f6b0aa1"
+        };
+
+        // Variables globales
+        let db;
+        let isFirebaseConnected = false;
+        let credentialsData = {};
+        let commercesData = {};
+        let validationsData = {};
+        let currentFilter = 'all';
+        let currentCredentialId = '';
+        let currentCommerceCode = '';
+
+        // Inicializar Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            isFirebaseConnected = true;
+            updateConnectionStatus(true);
+            setupRealTimeListeners();
+            console.log('✅ Firebase conectado correctamente en Panel Admin');
+        } catch (error) {
+            console.error('❌ Error conectando Firebase:', error);
+            updateConnectionStatus(false);
+            showNotification('Error de conexión con Firebase', 'error');
+        }
+
+        // Configurar listeners en tiempo real
+        function setupRealTimeListeners() {
+            if (!isFirebaseConnected) return;
+
+            // Listener para credenciales
+            db.ref('credenciales').on('value', (snapshot) => {
+                const newData = snapshot.val() || {};
+                
+                // Detectar cambios para animaciones
+                const oldKeys = Object.keys(credentialsData);
+                const newKeys = Object.keys(newData);
+                const addedKeys = newKeys.filter(key => !oldKeys.includes(key));
+                
+                credentialsData = newData;
+                updateRealTimeIndicator('credenciales', addedKeys.length > 0);
+                updateDashboard();
+                loadCredentials();
+                
+                console.log('📊 Credenciales sincronizadas desde Firebase');
+            }, (error) => {
+                console.error('Error en listener de credenciales:', error);
+            });
+
+            // Listener para comercios
+            db.ref('comercios').on('value', (snapshot) => {
+                const newData = snapshot.val() || {};
+                commercesData = newData;
+                updateRealTimeIndicator('comercios', Object.keys(newData).length > 0);
+                updateDashboard();
+                loadBenefits();
+                
+                console.log('🏪 Comercios sincronizados desde Firebase');
+            }, (error) => {
+                console.error('Error en listener de comercios:', error);
+            });
+
+            // Listener para validaciones
+            db.ref('validaciones').on('value', (snapshot) => {
+                const newData = snapshot.val() || {};
+                validationsData = newData;
+                updateRealTimeIndicator('validaciones', Object.keys(newData).length > 0);
+                updateDashboard();
+                loadValidations();
+                updateAnalytics();
+                
+                console.log('✅ Validaciones sincronizadas desde Firebase');
+            }, (error) => {
+                console.error('Error en listener de validaciones:', error);
+            });
+
+            // Inicializar comercios por defecto si no existen
+            initializeDefaultCommerces();
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.textContent = '🟢 Conectado a Firebase Cloud - Datos en Tiempo Real';
+                statusElement.className = 'connection-status';
+            } else {
+                statusElement.textContent = '🔴 Sin conexión a Firebase';
+                statusElement.className = 'connection-status disconnected';
+            }
+        }
+
+        function updateRealTimeIndicator(type, hasChanges = false) {
+            const indicator = document.getElementById('realTimeIndicator');
+            if (hasChanges) {
+                indicator.textContent = '🔄 Sincronizando...';
+                indicator.className = 'real-time-indicator syncing';
+                
+                setTimeout(() => {
+                    indicator.textContent = '📡 Datos Sincronizados';
+                    indicator.className = 'real-time-indicator';
+                }, 1000);
+            } else {
+                indicator.textContent = '📡 Datos Sincronizados';
+                indicator.className = 'real-time-indicator';
+            }
+        }
+
+        // Inicializar comercios por defecto
+        async function initializeDefaultCommerces() {
+            if (!isFirebaseConnected) return;
+            
+            try {
+                const snapshot = await db.ref('comercios').once('value');
+                const existingCommerces = snapshot.val();
+                
+                if (!existingCommerces || Object.keys(existingCommerces).length === 0) {
+                    const defaultCommerces = {
+                        'REST001': { code: "REST001", name: "Restaurante El Buen Sabor", category: "Restaurantes", discount: 15, active: true },
+                        'FASH002': { code: "FASH002", name: "Tienda Fashion Style", category: "Ropa", discount: 20, active: true },
+                        'TECH003': { code: "TECH003", name: "TechStore Viña", category: "Tecnología", discount: 10, active: true },
+                        'CAFE004': { code: "CAFE004", name: "Café Central", category: "Cafeterías", discount: 12, active: true }
+                    };
+                    
+                    await db.ref('comercios').set(defaultCommerces);
+                    console.log('✅ Comercios por defecto inicializados');
+                }
+            } catch (error) {
+                console.error('Error inicializando comercios por defecto:', error);
+            }
+        }
+
+        // Funciones de navegación de tabs
+        function changeTab(tabName, element) {
+            // Ocultar todos los contenidos
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Remover clase activa de todos los tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Mostrar el contenido seleccionado
+            document.getElementById(tabName).classList.add('active');
+            element.classList.add('active');
+            
+            // Actualizar contenido específico
+            updateContent(tabName);
+        }
+
+        function updateContent(tabName) {
+            switch (tabName) {
+                case 'dashboard':
+                    updateDashboard();
+                    break;
+                case 'credentials':
+                    loadCredentials();
+                    break;
+                case 'benefits':
+                    loadBenefits();
+                    break;
+                case 'validations':
+                    loadValidations();
+                    break;
+                case 'analytics':
+                    updateAnalytics();
+                    break;
+            }
+        }
+
+        // Funciones del Dashboard
+        function updateDashboard() {
+            const credentials = Object.values(credentialsData);
+            const commerces = Object.values(commercesData);
+            const validations = Object.values(validationsData);
+            
+            const totalCredentials = credentials.length;
+            const activeCredentials = credentials.filter(c => c.estado === 'Activa').length;
+            const activeCommerces = commerces.filter(c => c.active).length;
+            const expiringCount = getExpiringCredentials().length;
+            const totalValidationsCount = validations.length;
+            const todayValidationsCount = getTodayValidations().length;
+            
+            // Actualizar stats con animación
+            updateStatCard('totalStudents', totalCredentials);
+            updateStatCard('activeStudents', activeCredentials);
+            updateStatCard('totalBenefits', activeCommerces);
+            updateStatCard('expiringCredentials', expiringCount);
+            updateStatCard('totalValidations', totalValidationsCount);
+            updateStatCard('todayValidations', todayValidationsCount);
+            
+            updateAlerts(expiringCount, activeCredentials, totalValidationsCount);
+        }
+
+        function updateStatCard(elementId, value) {
+            const element = document.getElementById(elementId);
+            const card = document.getElementById(elementId + 'Card') || element?.closest('.stat-card');
+            
+            if (element) {
+                const currentValue = parseInt(element.textContent) || 0;
+                if (currentValue !== value) {
+                    element.textContent = value;
+                    if (card) {
+                        card.classList.add('updated');
+                        setTimeout(() => card.classList.remove('updated'), 2000);
+                    }
+                }
+            }
+        }
+
+        function getExpiringCredentials() {
+            const credentials = Object.values(credentialsData);
+            const today = new Date();
+            
+            return credentials.filter(credential => {
+                if (credential.estado !== 'Activa') return false;
+                
+                try {
+                    const expireDate = new Date(credential.validoHasta.split('/').reverse().join('-'));
+                    const daysToExpire = Math.ceil((expireDate - today) / (1000 * 60 * 60 * 24));
+                    return daysToExpire <= 30 && daysToExpire > 0;
+                } catch (error) {
+                    return false;
+                }
+            });
+        }
+
+        function getTodayValidations() {
+            const validations = Object.values(validationsData);
+            const today = new Date().toLocaleDateString('es-CL');
+            return validations.filter(v => v.date === today);
+        }
+
+        function updateAlerts(expiringCount, activeCredentials, totalValidations) {
+            const alertsList = document.getElementById('alertsList');
+            let alerts = [];
+            
+            if (expiringCount > 0) {
+                alerts.push({
+                    type: 'warning',
+                    icon: '⚠️',
+                    title: 'Credenciales por vencer',
+                    message: `${expiringCount} credenciales vencerán en los próximos 30 días.`
+                });
+            }
+            
+            if (activeCredentials === 0) {
+                alerts.push({
+                    type: 'error',
+                    icon: '❌',
+                    title: 'Sin credenciales activas',
+                    message: 'No hay credenciales activas en el sistema.'
+                });
+            }
+            
+            if (totalValidations === 0) {
+                alerts.push({
+                    type: 'info',
+                    icon: 'ℹ️',
+                    title: 'Sin validaciones registradas',
+                    message: 'Aún no se han registrado validaciones en el sistema.'
+                });
+            }
+            
+            if (alerts.length === 0) {
+                alerts.push({
+                    type: 'success',
+                    icon: '✅',
+                    title: 'Sistema funcionando correctamente',
+                    message: 'Todas las operaciones están ejecutándose sin problemas.'
+                });
+            }
+            
+            alertsList.innerHTML = alerts.map(alert => `
+                <div class="alert-item">
+                    <strong>${alert.icon} ${alert.title}</strong><br>
+                    ${alert.message}
+                </div>
+            `).join('');
+        }
+
+        // Funciones de Credenciales
+        function loadCredentials() {
+            const tbody = document.getElementById('credentialsTableBody');
+            const credentials = Object.entries(credentialsData);
+            
+            if (credentials.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-state-icon">📄</div>
+                            <div>No hay credenciales registradas aún</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Filtrar credenciales
+            const filteredCredentials = filterCredentialsByType(credentials);
+            
+            tbody.innerHTML = filteredCredentials.map(([id, credential]) => {
+                const status = getCredentialStatus(credential);
+                return `
+                    <tr data-id="${id}">
+                        <td><strong>${id}</strong></td>
+                        <td>${credential.nombre}</td>
+                        <td>${credential.rut}</td>
+                        <td>${credential.curso}</td>
+                        <td>${credential.validoDesde} - ${credential.validoHasta}</td>
+                        <td><span class="status-badge ${status.class}">${status.text}</span></td>
+                        <td>
+                            <button class="action-btn btn-edit" onclick="editCredential('${id}')" title="Editar">✏️</button>
+                            <button class="action-btn btn-toggle" onclick="toggleCredential('${id}')" title="${credential.estado === 'Activa' ? 'Desactivar' : 'Activar'}">${credential.estado === 'Activa' ? '⏸️' : '▶️'}</button>
+                            <button class="action-btn btn-extend" onclick="extendCredential('${id}')" title="Extender vigencia">📅</button>
+                            <button class="action-btn btn-delete" onclick="deleteCredential('${id}')" title="Eliminar">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterCredentialsByType(credentials) {
+            const searchTerm = document.getElementById('credentialsSearch')?.value.toLowerCase() || '';
+            
+            return credentials.filter(([id, credential]) => {
+                // Filtro de búsqueda
+                const matchesSearch = !searchTerm || 
+                    credential.nombre.toLowerCase().includes(searchTerm) ||
+                    credential.rut.toLowerCase().includes(searchTerm) ||
+                    id.toLowerCase().includes(searchTerm);
+                
+                if (!matchesSearch) return false;
+                
+                // Filtro por tipo
+                switch (currentFilter) {
+                    case 'active':
+                        return credential.estado === 'Activa' && !isCredentialExpired(credential);
+                    case 'inactive':
+                        return credential.estado === 'Inactiva' || isCredentialExpired(credential);
+                    case 'expiring':
+                        return credential.estado === 'Activa' && isCredentialExpiring(credential);
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        function getCredentialStatus(credential) {
+            if (credential.estado === 'Inactiva') {
+                return { class: 'status-inactive', text: '❌ Inactiva' };
+            }
+            
+            try {
+                const today = new Date();
+                const expireDate = new Date(credential.validoHasta.split('/').reverse().join('-'));
+                const daysToExpire = Math.ceil((expireDate - today) / (1000 * 60 * 60 * 24));
+                
+                if (daysToExpire <= 0) {
+                    return { class: 'status-inactive', text: '❌ Vencida' };
+                } else if (daysToExpire <= 30) {
+                    return { class: 'status-expiring', text: `⚠️ Vence en ${daysToExpire} días` };
+                }
+                
+                return { class: 'status-active', text: '✅ Activa' };
+            } catch (error) {
+                return { class: 'status-inactive', text: '❌ Error' };
+            }
+        }
+
+        function isCredentialExpired(credential) {
+            try {
+                const today = new Date();
+                const expireDate = new Date(credential.validoHasta.split('/').reverse().join('-'));
+                return expireDate < today;
+            } catch (error) {
+                return true;
+            }
+        }
+
+        function isCredentialExpiring(credential) {
+            try {
+                const today = new Date();
+                const expireDate = new Date(credential.validoHasta.split('/').reverse().join('-'));
+                const daysToExpire = Math.ceil((expireDate - today) / (1000 * 60 * 60 * 24));
+                return daysToExpire <= 30 && daysToExpire > 0;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        // Funciones CRUD para credenciales
+        async function editCredential(id) {
+            if (!isFirebaseConnected) {
+                showNotification('Sin conexión a Firebase', 'error');
+                return;
+            }
+            
+            const credential = credentialsData[id];
+            if (!credential) {
+                showNotification('Credencial no encontrada', 'error');
+                return;
+            }
+            
+            currentCredentialId = id;
+            
+            // Llenar modal con datos actuales
+            document.getElementById('editName').value = credential.nombre;
+            document.getElementById('editRut').value = credential.rut;
+            document.getElementById('editCourse').value = credential.curso;
+            document.getElementById('editValidUntil').value = formatDateForInput(credential.validoHasta);
+            document.getElementById('editStatus').value = credential.estado;
+            
+            openModal('editCredentialModal');
+        }
+
+        async function toggleCredential(id) {
+            if (!isFirebaseConnected) {
+                showNotification('Sin conexión a Firebase', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const credential = credentialsData[id];
+                const newStatus = credential.estado === 'Activa' ? 'Inactiva' : 'Activa';
+                
+                await db.ref(`credenciales/${id}/estado`).set(newStatus);
+                
+                showNotification(`Credencial ${newStatus.toLowerCase()} exitosamente`, 'success');
+            } catch (error) {
+                console.error('Error toggling credential:', error);
+                showNotification('Error al cambiar estado: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function extendCredential(id) {
+            if (!isFirebaseConnected) {
+                showNotification('Sin conexión a Firebase', 'error');
+                return;
+            }
+            
+            const months = prompt('¿Por cuántos meses extender la vigencia?', '6');
+            if (!months || isNaN(months) || parseInt(months) <= 0) return;
+            
+            showLoading(true);
+            
+            try {
+                const credential = credentialsData[id];
+                const currentExpiry = new Date(credential.validoHasta.split('/').reverse().join('-'));
+                currentExpiry.setMonth(currentExpiry.getMonth() + parseInt(months));
+                const newExpiry = currentExpiry.toLocaleDateString('es-CL');
+                
+                await db.ref(`credenciales/${id}/validoHasta`).set(newExpiry);
+                
+                showNotification(`Credencial extendida ${months} meses exitosamente`, 'success');
+            } catch (error) {
+                console.error('Error extending credential:', error);
+                showNotification('Error al extender credencial: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function deleteCredential(id) {
+            if (!isFirebaseConnected) {
+                showNotification('Sin conexión a Firebase', 'error');
+                return;
+            }
+            
+            const credential = credentialsData[id];
+            if (!confirm(`¿Estás seguro de eliminar la credencial de ${credential.nombre}?\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                await db.ref(`credenciales/${id}`).remove();
+                showNotification('Credencial eliminada exitosamente', 'success');
+            } catch (error) {
+                console.error('Error deleting credential:', error);
+                showNotification('Error al eliminar credencial: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Funciones de Comercios
+        function loadBenefits() {
+            const grid = document.getElementById('benefitsGrid');
+            const commerces = Object.values(commercesData);
+            
+            if (commerces.length === 0) {
+                grid.innerHTML = `
+                    <div class="benefit-card">
+                        <div class="benefit-title">📦 Sin comercios registrados</div>
+                        <div style="text-align: center; color: rgba(212, 175, 55, 0.7);">
+                            No hay comercios afiliados aún
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const searchTerm = document.getElementById('commercesSearch')?.value.toLowerCase() || '';
+            const filteredCommerces = commerces.filter(commerce => 
+                !searchTerm || 
+                commerce.name.toLowerCase().includes(searchTerm) ||
+                commerce.category.toLowerCase().includes(searchTerm) ||
+                commerce.code.toLowerCase().includes(searchTerm)
+            );
+            
+            grid.innerHTML = filteredCommerces.map(commerce => `
+                <div class="benefit-card">
+                    <div class="benefit-title">${commerce.name}</div>
+                    <div style="color: rgba(212, 175, 55, 0.7); margin-bottom: 10px;">${commerce.category}</div>
+                    <div style="font-size: 0.9rem; color: rgba(212, 175, 55, 0.7); margin-bottom: 10px;">
+                        <strong>Código:</strong> ${commerce.code}
+                    </div>
+                    <div class="benefit-discount">${commerce.discount}%</div>
+                    <div class="status-badge ${commerce.active ? 'status-active' : 'status-inactive'}">
+                        ${commerce.active ? '✅ Activo' : '❌ Inactivo'}
+                    </div>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button class="action-btn btn-edit" onclick="editCommerce('${commerce.code}')" title="Editar">✏️</button>
+                        <button class="action-btn btn-toggle" onclick="toggleCommerce('${commerce.code}')" title="${commerce.active ? 'Desactivar' : 'Activar'}">${commerce.active ? '⏸️' : '▶️'}</button>
+                        <button class="action-btn btn-delete" onclick="deleteCommerce('${commerce.code}')" title="Eliminar">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addCommerce() {
+            currentCommerceCode = '';
+            
+            // Limpiar modal
+            document.getElementById('commerceModalTitle').textContent = '➕ Nuevo Comercio';
+            document.getElementById('editCommerceName').value = '';
+            document.getElementById('editCommerceCode').value = '';
+            document.getElementById('editCommerceCategory').value = '';
+            document.getElementById('editCommerceDiscount').value = '';
+            document.getElementById('editCommerceActive').value = 'true';
+            
+            openModal('editCommerceModal');
+        }
+
+        async function editCommerce(code) {
+            if (!isFirebaseConnected) {
+                showNotification('Sin conexión a Firebase', 'error');
+                return;
+            }
+            
+            const commerce = commercesData[code];
+            if (!commerce) {
+                showNotification('Comercio no encontrado', 'error');
+                return;
+            }
+            
+            currentCommerceCode = code;
+            
+            // Llenar modal con datos actuales
+            document.getElementById('commerceModalTitle').textContent = '✏️ Editar Comercio';
+            document.getElementById('editCommerceName').value = commerce.name;
+            document.getElementById('editCommerceCode').value = commerce.code;
+            document.getElementById('editCommerceCategory').value = commerce.category;
+            document.getElementById('editCommerceDiscount').value = commerce.discount;
+            document.getElementById('editCommerceActive').value = commerce.active.toString();
+            
+            openModal('editCommerceModal');
+        }
+
+        async function toggleCommerce(code) {
+            if (!isFirebaseConnected) {
+                showNotification('Sin conexión a Firebase', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const commerce = commercesData[code];
+                const newStatus = !commerce.active;
+                
+                await db.ref(`comercios/${code}/active`).set(newStatus);
+                
+                showNotification(`Comercio ${newStatus ? 'activado' : 'desactivado'} exitosamente`, 'success');
+            } catch (error) {
+                console.error('Error toggling commerce:', error);
+                showNotification('Error al cambiar estado: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function deleteCommerce(code) {
+            if (!isFirebaseConnected) {
+                showNotification('Sin conexión a Firebase', 'error');
+                return;
+            }
+            
+            const commerce = commercesData[code];
+            if (!confirm(`¿Estás seguro de eliminar el comercio "${commerce.name}"?\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                await db.ref(`comercios/${code}`).remove();
+                showNotification('Comercio eliminado exitosamente', 'success');
+            } catch (error) {
+                console.error('Error deleting commerce:', error);
+                showNotification('Error al eliminar comercio: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Funciones de Validaciones
+        function loadValidations() {
+            const tbody = document.getElementById('validationsTableBody');
+            const validations = Object.values(validationsData);
+            
+            if (validations.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-state-icon">✅</div>
+                            <div>No hay validaciones registradas aún</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Filtrar y ordenar validaciones
+            const filteredValidations = filterValidationsByType(validations);
+            const sortedValidations = filteredValidations.sort((a, b) => b.timestamp - a.timestamp);
+            
+            tbody.innerHTML = sortedValidations.map(validation => `
+                <tr>
+                    <td>${validation.date} ${validation.time}</td>
+                    <td>${validation.studentName}</td>
+                    <td>${validation.commerceName}</td>
+                    <td><strong>${validation.discount}%</strong></td>
+                    <td><code>${validation.credentialId}</code></td>
+                    <td><span class="status-badge status-active">✅ Válida</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function filterValidationsByType(validations) {
+            const searchTerm = document.getElementById('validationsSearch')?.value.toLowerCase() || '';
+            const filter = document.querySelector('.filter-btn.active')?.textContent.toLowerCase() || 'todas';
+            
+            return validations.filter(validation => {
+                // Filtro de búsqueda
+                const matchesSearch = !searchTerm || 
+                    validation.studentName.toLowerCase().includes(searchTerm) ||
+                    validation.commerceName.toLowerCase().includes(searchTerm) ||
+                    validation.credentialId.toLowerCase().includes(searchTerm);
+                
+                if (!matchesSearch) return false;
+                
+                // Filtro por período
+                const validationDate = new Date(validation.timestamp);
+                const today = new Date();
+                const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+                
+                switch (filter) {
+                    case 'hoy':
+                        return validationDate >= todayStart;
+                    case 'esta semana':
+                        return validationDate >= weekStart;
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        // Funciones de Analytics
+        function updateAnalytics() {
+            const validations = Object.values(validationsData);
+            const todayValidations = getTodayValidations();
+            
+            document.getElementById('totalValidationsAll').textContent = validations.length;
+            document.getElementById('validationsToday').textContent = todayValidations.length;
+            
+            if (validations.length > 0) {
+                const ranking = getCommerceRanking();
+                if (ranking.length > 0) {
+                    document.getElementById('topCommerce').textContent = ranking[0].name.split(' ')[0];
+                    document.getElementById('avgValidationsPerDay').textContent = Math.round(validations.length / Math.max(1, 30));
+                    updateCommerceRanking(ranking);
+                }
+            } else {
+                document.getElementById('topCommerce').textContent = '-';
+                document.getElementById('avgValidationsPerDay').textContent = '0';
+                updateCommerceRanking([]);
+            }
+        }
+
+        function getCommerceRanking() {
+            const validations = Object.values(validationsData);
+            const commerceCount = {};
+            
+            validations.forEach(validation => {
+                commerceCount[validation.commerceCode] = (commerceCount[validation.commerceCode] || 0) + 1;
+            });
+            
+            return Object.entries(commerceCount)
+                .map(([code, count]) => ({
+                    code,
+                    name: getCommerceName(code),
+                    count
+                }))
+                .sort((a, b) => b.count - a.count);
+        }
+
+        function getCommerceName(code) {
+            const commerce = commercesData[code];
+            return commerce ? commerce.name : 'Comercio Desconocido';
+        }
+
+        function updateCommerceRanking(ranking) {
+            const container = document.getElementById('commerceRanking');
+            
+            if (ranking.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <div>No hay validaciones registradas aún</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = ranking.map((commerce, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+                
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; background: rgba(212, 175, 55, 0.1); border-radius: 10px; transition: all 0.3s ease;">
+                        <div>
+                            <span style="font-size: 1.2rem; margin-right: 10px;">${medal}</span>
+                            <strong style="color: #d4af37;">${commerce.name}</strong>
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #2ecc71;">${commerce.count}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Funciones de filtros y búsqueda
+        function filterCredentials(type) {
+            currentFilter = type;
+            
+            // Actualizar botones activos
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const activeBtn = type === 'all' ? 'filterAll' : 
+                             type === 'active' ? 'filterActive' : 
+                             type === 'inactive' ? 'filterInactive' : 'filterExpiring';
+            
+            document.getElementById(activeBtn)?.classList.add('active');
+            
+            loadCredentials();
+        }
+
+        function filterValidations(type) {
+            // Actualizar botones activos
+            document.querySelectorAll('#validations .filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const activeBtn = type === 'all' ? 'validationsFilterAll' : 
+                             type === 'today' ? 'validationsFilterToday' : 'validationsFilterWeek';
+            
+            document.getElementById(activeBtn)?.classList.add('active');
+            
+            loadValidations();
+        }
+
+        // Funciones de modales
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Event listeners para forms
+        document.getElementById('editCredentialForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!isFirebaseConnected || !currentCredentialId) {
+                showNotification('Error en la operación', 'error');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('saveCredentialBtn');
+            saveBtn.textContent = '⏳ Guardando...';
+            saveBtn.disabled = true;
+            
+            try {
+                const updatedData = {
+                    nombre: document.getElementById('editName').value.trim(),
+                    rut: document.getElementById('editRut').value.trim(),
+                    curso: document.getElementById('editCourse').value.trim(),
+                    validoHasta: formatDateForDisplay(document.getElementById('editValidUntil').value),
+                    estado: document.getElementById('editStatus').value
+                };
+                
+                await db.ref(`credenciales/${currentCredentialId}`).update(updatedData);
+                
+                showNotification('Credencial actualizada exitosamente', 'success');
+                closeModal('editCredentialModal');
+            } catch (error) {
+                console.error('Error updating credential:', error);
+                showNotification('Error al actualizar: ' + error.message, 'error');
+            } finally {
+                saveBtn.textContent = '💾 Guardar Cambios';
+                saveBtn.disabled = false;
+            }
+        });
+
+        document.getElementById('editCommerceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!isFirebaseConnected) {
+                showNotification('Sin conexión a Firebase', 'error');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('saveCommerceBtn');
+            saveBtn.textContent = '⏳ Guardando...';
+            saveBtn.disabled = true;
+            
+            try {
+                const commerceData = {
+                    name: document.getElementById('editCommerceName').value.trim(),
+                    code: document.getElementById('editCommerceCode').value.trim().toUpperCase(),
+                    category: document.getElementById('editCommerceCategory').value.trim(),
+                    discount: parseInt(document.getElementById('editCommerceDiscount').value),
+                    active: document.getElementById('editCommerceActive').value === 'true'
+                };
+                
+                // Si es nuevo comercio o cambió el código
+                const finalCode = currentCommerceCode || commerceData.code;
+                
+                if (currentCommerceCode && currentCommerceCode !== commerceData.code) {
+                    // Eliminar el anterior y crear uno nuevo
+                    await db.ref(`comercios/${currentCommerceCode}`).remove();
+                    await db.ref(`comercios/${commerceData.code}`).set(commerceData);
+                } else {
+                    await db.ref(`comercios/${finalCode}`).set(commerceData);
+                }
+                
+                showNotification('Comercio guardado exitosamente', 'success');
+                closeModal('editCommerceModal');
+            } catch (error) {
+                console.error('Error saving commerce:', error);
+                showNotification('Error al guardar: ' + error.message, 'error');
+            } finally {
+                saveBtn.textContent = '💾 Guardar Cambios';
+                saveBtn.disabled = false;
+            }
+        });
+
+        // Event listeners para búsqueda
+        document.getElementById('credentialsSearch')?.addEventListener('input', debounce(loadCredentials, 300));
+        document.getElementById('commercesSearch')?.addEventListener('input', debounce(loadBenefits, 300));
+        document.getElementById('validationsSearch')?.addEventListener('input', debounce(loadValidations, 300));
+
+        // Cerrar modales al hacer click fuera
+        window.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        });
+
+        // Funciones de utilidad
+        function formatDateForInput(dateString) {
+            try {
+                const parts = dateString.split('/');
+                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function formatDateForDisplay(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('es-CL');
+            } catch (error) {
+                return dateString;
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = show ? 'flex' : 'none';
+        }
+
+        function showNotification(message, type = 'success') {
+            const existing = document.querySelector('.notification');
+            if (existing) existing.remove();
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        // Atajos de teclado
+        document.addEventListener('keydown', function(e) {
+            // Escape para cerrar modales
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.style.display = 'none';
+                });
+            }
+            
+            // F5 para actualizar datos
+            if (e.key === 'F5') {
+                e.preventDefault();
+                updateDashboard();
+                showNotification('Datos actualizados', 'success');
+            }
+        });
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                showLoading(true);
+                
+                // Configurar fechas por defecto en modales
+                const today = new Date().toISOString().split('T')[0];
+                const nextYear = new Date();
+                nextYear.setFullYear(nextYear.getFullYear() + 1);
+                const nextYearDate = nextYear.toISOString().split('T')[0];
+                
+                const validUntilField = document.getElementById('editValidUntil');
+                if (validUntilField && !validUntilField.value) {
+                    validUntilField.value = nextYearDate;
+                }
+                
+                setTimeout(() => {
+                    showLoading(false);
+                }, 2000);
+                
+                console.log('✅ Panel de Administración Master Móvil v4.0 - Firebase Edition');
+                console.log('🔥 Sincronización en tiempo real con Firebase');
+                console.log('📊 Dashboard administrativo completo');
+                console.log('🛡️ Sistema de gestión seguro y eficiente');
+                
+            } catch (error) {
+                console.error('Error en inicialización:', error);
+                showLoading(false);
+                showNotification('Error en la inicialización del sistema', 'error');
+            }
+        });
+
+        // Exponer funciones para debugging
+        window.MasterMovilAdminFirebase = {
+            getCredentials: () => credentialsData,
+            getCommerces: () => commercesData,
+            getValidations: () => validationsData,
+            checkConnection: () => isFirebaseConnected,
+            refreshData: () => {
+                updateDashboard();
+                loadCredentials();
+                loadBenefits();
+                loadValidations();
+                updateAnalytics();
+            }
+        };
+    </script>
+</body>
+</html>

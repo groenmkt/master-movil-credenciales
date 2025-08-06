@@ -1,0 +1,25 @@
+# Redirects para Master Móvil Sistema
+# Formato: from to [status] [conditions]
+
+# Módulos principales
+/generador        /generador.html        200
+/validador        /validador.html        200  
+/admin            /admin.html            200
+/panel            /admin.html            200
+/test             /test.html             200
+
+# Aliases amigables
+/credenciales     /generador.html        200
+/validar          /validador.html        200
+/dashboard        /admin.html            200
+/sistema          /admin.html            200
+
+# Redirects específicos
+/inicio           /index.html            200
+/home             /index.html            200
+
+# API endpoints (para futuras integraciones)
+/api/*            https://master-movil-credenciales-default-rtdb.firebaseio.com/:splat  200
+
+# Manejo de SPA - debe ir al final
+/*                /index.html            200

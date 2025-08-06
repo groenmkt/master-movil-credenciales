@@ -1,0 +1,65 @@
+[build]
+  # No build command needed for static site
+  publish = "."
+  
+[build.environment]
+  NODE_VERSION = "18"
+
+[[headers]]
+  # Apply these headers to all routes
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "same-origin"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com; font-src 'self' data:;"
+
+[[headers]]
+  # Headers for HTML files
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  # Headers for static assets
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+# Form handling
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = false
+  minify = true
+
+[build.processing.js]
+  bundle = false
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
+
+# Environment variables (para producción)
+[context.production.environment]
+  FIREBASE_API_KEY = "AIzaSyAUM0tIPiCfcEnLbcK8JPZMBBIpY89wlV0"
+  FIREBASE_AUTH_DOMAIN = "master-movil-credenciales.firebaseapp.com"
+  FIREBASE_DATABASE_URL = "https://master-movil-credenciales-default-rtdb.firebaseio.com"
+  FIREBASE_PROJECT_ID = "master-movil-credenciales"
+
+# Configuración de deploy preview
+[context.deploy-preview]
+  [context.deploy-preview.environment]
+    ENVIRONMENT = "preview"
+
+# Configuración de branch deploys
+[context.branch-deploy]
+  [context.branch-deploy.environment]
+    ENVIRONMENT = "development"

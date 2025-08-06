@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validador de Credenciales - Master Móvil</title>
+    
+    <!-- Firebase SDK v8 (Compatible) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #d4af37;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            border: 2px solid #d4af37;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #d4af37;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 3px solid #d4af37;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .connection-status {
+            background: rgba(46, 204, 113, 0.1);
+            border: 2px solid #2ecc71;
+            color: #2ecc71;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-top: 15px;
+            display: inline-block;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(231, 76, 60, 0.1);
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .company-info {
+            text-align: center;
+            padding: 20px;
+            background: rgba(212, 175, 55, 0.1);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .company-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #d4af37;
+        }
+
+        .validator-section {
+            padding: 40px;
+        }
+
+        .instructions {
+            background: rgba(212, 175, 55, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #d4af37;
+        }
+
+        .instructions h3 {
+            color: #d4af37;
+            margin-bottom: 10px;
+        }
+
+        .instructions p {
+            color: rgba(212, 175, 55, 0.8);
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .live-stats {
+            background: rgba(212, 175, 55, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            font-size: 12px;
+        }
+
+        .input-group {
+            margin-bottom: 30px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: #d4af37;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            font-size: 18px;
+            background: rgba(212, 175, 55, 0.1);
+            color: #d4af37;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #f1c40f;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+        }
+
+        .input-group input.error {
+            border-color: #e74c3c;
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+            text-align: center;
+            display: none;
+        }
+
+        .validate-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #d4af37 0%, #f1c40f 100%);
+            color: #1a1a1a;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .validate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
+        }
+
+        .validate-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.6;
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-valid {
+            background: rgba(46, 204, 113, 0.1);
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .result-invalid {
+            background: rgba(231, 76, 60, 0.1);
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .result-warning {
+            background: rgba(241, 196, 15, 0.1);
+            border-color: #f1c40f;
+            color: #f1c40f;
+        }
+
+        .result-icon {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .result-message {
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .credential-details {
+            background: rgba(212, 175, 55, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #d4af37;
+        }
+
+        .detail-value {
+            color: #f1c40f;
+            font-weight: 500;
+            text-align: right;
+            word-break: break-word;
+        }
+
+        .stats-section {
+            background: rgba(212, 175, 55, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: rgba(212, 175, 55, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #d4af37;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: rgba(212, 175, 55, 0.8);
+            margin-top: 5px;
+        }
+
+        .clear-btn {
+            background: rgba(212, 175, 55, 0.2);
+            color: #d4af37;
+            border: 2px solid #d4af37;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        .clear-btn:hover {
+            background: rgba(212, 175, 55, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .validation-history {
+            background: rgba(212, 175, 55, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .validation-item {
+            background: rgba(212, 175, 55, 0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #d4af37;
+        }
+
+        .validation-time {
+            font-size: 12px;
+            color: rgba(212, 175, 55, 0.7);
+            margin-bottom: 5px;
+        }
+
+        .validation-details {
+            color: #d4af37;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .validator-section {
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Validador de Credenciales</h1>
+            <p>Sistema de Verificación Digital Master Móvil</p>
+            <div class="connection-status" id="connectionStatus">
+                🔄 Conectando a Firebase...
+            </div>
+        </div>
+
+        <div class="company-info">
+            <div class="company-name">Escuela de Conducir Master Móvil</div>
+            <div style="font-size: 14px; opacity: 0.8;">www.mastermovil.cl</div>
+        </div>
+
+        <div class="validator-section">
+            <div class="instructions">
+                <h3>📋 Instrucciones de Validación</h3>
+                <p><strong>1.</strong> Ingresa tu código único de comercio (proporcionado por Master Móvil)</p>
+                <p><strong>2.</strong> Ingresa el ID de la credencial del estudiante (formato: MMAAAMMMDDD)</p>
+                <p><strong>3.</strong> Presiona "Validar" para verificar autenticidad y aplicar descuento</p>
+                <p><strong>⚠️ Importante:</strong> Solo comercios autorizados pueden validar credenciales</p>
+                
+                <div class="live-stats">
+                    <strong>📊 Sistema en Tiempo Real:</strong> 
+                    Credenciales en Firebase: <span id="liveCredentials">0</span> | 
+                    Validaciones hoy: <span id="liveTodayValidations">0</span> | 
+                    Última actualización: <span id="liveLastUpdate">--:--</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="commerceCode">🏪 Código de Comercio Autorizado:</label>
+                <input type="text" id="commerceCode" placeholder="Ingresa tu código único (Ej: REST001)" maxlength="8" required>
+                <div class="error-message" id="commerceError">Código de comercio inválido o no autorizado</div>
+            </div>
+
+            <div class="input-group">
+                <label for="credentialId">🎓 ID de Credencial del Estudiante:</label>
+                <input type="text" id="credentialId" placeholder="MM250805001" maxlength="11" required>
+                <div class="error-message" id="credentialError">Formato de ID inválido</div>
+            </div>
+
+            <button class="validate-btn" onclick="validateCredential()" id="validateBtn">
+                🔍 Validar Credencial y Aplicar Descuento
+            </button>
+
+            <div id="resultContainer" class="result-container">
+                <div id="resultIcon" class="result-icon"></div>
+                <div id="resultTitle" class="result-title"></div>
+                <div id="resultMessage" class="result-message"></div>
+                <div id="credentialDetails" class="credential-details" style="display: none;"></div>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="clear-btn" onclick="clearForm()">
+                    🔄 Limpiar Formulario
+                </button>
+            </div>
+
+            <div class="validation-history" id="validationHistory" style="display: none;">
+                <h4 style="color: #d4af37; text-align: center; margin-bottom: 15px;">📊 Últimas Validaciones</h4>
+                <div id="historyList">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <h4 style="color: #d4af37; text-align: center; margin-bottom: 15px;">
+                    📈 Estadísticas del Sistema
+                </h4>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number" id="statTotalValidations">0</span>
+                        <div class="stat-label">Validaciones Totales</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="statTodayValidations">0</span>
+                        <div class="stat-label">Validaciones Hoy</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="statActiveCredentials">0</span>
+                        <div class="stat-label">Credenciales Activas</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="statActiveCommerces">0</span>
+                        <div class="stat-label">Comercios Activos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🔥 CONFIGURACIÓN FIREBASE - TU PROYECTO REAL
+        const firebaseConfig = {
+            apiKey: "AIzaSyAUM0tIPiCfcEnLbcK8JPZMBBIpY89wlV0",
+            authDomain: "master-movil-credenciales.firebaseapp.com",
+            databaseURL: "https://master-movil-credenciales-default-rtdb.firebaseio.com",
+            projectId: "master-movil-credenciales",
+            storageBucket: "master-movil-credenciales.firebasestorage.app",
+            messagingSenderId: "30682645748",
+            appId: "1:30682645748:web:7318cb15d2baa87f6b0aa1"
+        };
+
+        // Inicializar Firebase
+        let db;
+        let isFirebaseConnected = false;
+        let credentialsData = {};
+        let commercesData = [];
+        let validationsData = [];
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            isFirebaseConnected = true;
+            updateConnectionStatus(true);
+            console.log('✅ Firebase conectado correctamente en Validador');
+            
+            // Escuchar cambios en tiempo real
+            setupRealTimeListeners();
+        } catch (error) {
+            console.error('❌ Error conectando Firebase:', error);
+            updateConnectionStatus(false);
+        }
+
+        // Configurar listeners en tiempo real
+        function setupRealTimeListeners() {
+            if (!isFirebaseConnected) return;
+
+            // Escuchar credenciales
+            db.ref('credenciales').on('value', (snapshot) => {
+                credentialsData = snapshot.val() || {};
+                updateLiveStats();
+                console.log('📊 Credenciales actualizadas desde Firebase');
+            });
+
+            // Escuchar comercios
+            db.ref('comercios').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    commercesData = Object.values(data);
+                } else {
+                    // Comercios por defecto si no existen en Firebase
+                    commercesData = [
+                        { code: "REST001", name: "Restaurante El Buen Sabor", category: "Restaurantes", discount: 15, active: true },
+                        { code: "FASH002", name: "Tienda Fashion Style", category: "Ropa", discount: 20, active: true },
+                        { code: "TECH003", name: "TechStore Viña", category: "Tecnología", discount: 10, active: true },
+                        { code: "CAFE004", name: "Café Central", category: "Cafeterías", discount: 12, active: true }
+                    ];
+                }
+                updateLiveStats();
+            });
+
+            // Escuchar validaciones
+            db.ref('validaciones').on('value', (snapshot) => {
+                const data = snapshot.val();
+                validationsData = data ? Object.values(data) : [];
+                updateLiveStats();
+                updateValidationHistory();
+            });
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.textContent = '🟢 Conectado a Firebase Cloud - Datos en Tiempo Real';
+                statusElement.className = 'connection-status';
+            } else {
+                statusElement.textContent = '🔴 Sin conexión a Firebase';
+                statusElement.className = 'connection-status disconnected';
+            }
+        }
+
+        function updateLiveStats() {
+            const credentialValues = Object.values(credentialsData);
+            const activeCredentials = credentialValues.filter(c => c.estado === 'Activa').length;
+            const activeCommerces = commercesData.filter(c => c.active).length;
+            const todayValidations = getTodayValidations().length;
+
+            // Actualizar stats en vivo
+            document.getElementById('liveCredentials').textContent = credentialValues.length;
+            document.getElementById('liveTodayValidations').textContent = todayValidations;
+            document.getElementById('liveLastUpdate').textContent = new Date().toLocaleTimeString('es-CL');
+
+            // Actualizar stats principales
+            document.getElementById('statTotalValidations').textContent = validationsData.length;
+            document.getElementById('statTodayValidations').textContent = todayValidations;
+            document.getElementById('statActiveCredentials').textContent = activeCredentials;
+            document.getElementById('statActiveCommerces').textContent = activeCommerces;
+        }
+
+        function getTodayValidations() {
+            const today = new Date().toLocaleDateString('es-CL');
+            return validationsData.filter(v => v.date === today);
+        }
+
+        // Funciones de validación
+        function validateCredentialId(id) {
+            return /^MM\d{9}$/.test(id);
+        }
+
+        function validateCommerceCode(code) {
+            return commercesData.find(commerce => commerce.code === code && commerce.active);
+        }
+
+        function isCredentialExpired(credential) {
+            try {
+                const today = new Date();
+                const expireDate = new Date(credential.validoHasta.split('/').reverse().join('-'));
+                return expireDate < today;
+            } catch (error) {
+                return true;
+            }
+        }
+
+        function getDaysUntilExpiry(credential) {
+            try {
+                const today = new Date();
+                const expireDate = new Date(credential.validoHasta.split('/').reverse().join('-'));
+                const diffTime = expireDate - today;
+                return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            } catch (error) {
+                return 0;
+            }
+        }
+
+        // Funciones de interfaz
+        function showError(fieldId, message) {
+            const field = document.getElementById(fieldId === 'commerce' ? 'commerceCode' : fieldId);
+            const error = document.getElementById(fieldId + 'Error');
+            
+            if (field) field.classList.add('error');
+            if (error) {
+                error.textContent = message;
+                error.style.display = 'block';
+            }
+        }
+
+        function clearError(fieldId) {
+            const field = document.getElementById(fieldId === 'commerce' ? 'commerceCode' : fieldId);
+            const error = document.getElementById(fieldId + 'Error');
+            
+            if (field) field.classList.remove('error');
+            if (error) error.style.display = 'none';
+        }
+
+        function clearAllErrors() {
+            clearError('commerce');
+            clearError('credential');
+        }
+
+        // Función principal de validación
+        function validateCredential() {
+            clearAllErrors();
+            
+            const credentialId = document.getElementById('credentialId').value.trim();
+            const commerceCode = document.getElementById('commerceCode').value.trim();
+            const validateBtn = document.getElementById('validateBtn');
+            
+            // Validaciones básicas
+            if (!credentialId) {
+                showError('credential', 'Ingresa el ID de la credencial');
+                return;
+            }
+            
+            if (!commerceCode) {
+                showError('commerce', 'Ingresa tu código de comercio');
+                return;
+            }
+            
+            if (!validateCredentialId(credentialId)) {
+                showError('credential', 'Formato de ID inválido. Debe ser: MMAAAMMMDDD');
+                return;
+            }
+            
+            const commerce = validateCommerceCode(commerceCode);
+            if (!commerce) {
+                showError('commerce', 'Código de comercio inválido o no autorizado');
+                return;
+            }
+            
+            // Mostrar proceso de validación
+            validateBtn.textContent = '🔍 Validando en Firebase...';
+            validateBtn.disabled = true;
+            
+            // Simular tiempo de procesamiento
+            setTimeout(() => {
+                try {
+                    const credential = credentialsData[credentialId];
+                    
+                    if (!credential) {
+                        showInvalidResult(
+                            'Credencial No Encontrada',
+                            'El ID ingresado no corresponde a ninguna credencial en nuestro sistema.'
+                        );
+                    } else if (credential.estado !== 'Activa') {
+                        showInvalidResult(
+                            'Credencial Inactiva',
+                            'Esta credencial existe pero se encuentra suspendida o cancelada.'
+                        );
+                    } else if (isCredentialExpired(credential)) {
+                        showInvalidResult(
+                            'Credencial Vencida',
+                            'Esta credencial ha expirado y no es válida para descuentos.'
+                        );
+                    } else {
+                        const daysUntilExpiry = getDaysUntilExpiry(credential);
+                        
+                        if (daysUntilExpiry <= 30) {
+                            showWarningResult(credential, commerce, daysUntilExpiry);
+                        } else {
+                            showValidResult(credential, commerce);
+                        }
+                        
+                        // Registrar validación exitosa en Firebase
+                        recordValidationToFirebase(credentialId, commerce, credential);
+                    }
+                } catch (error) {
+                    console.error('Validation error:', error);
+                    showInvalidResult(
+                        'Error del Sistema',
+                        'Ocurrió un error al procesar la validación. Intenta nuevamente.'
+                    );
+                }
+                
+                validateBtn.textContent = '🔍 Validar Credencial y Aplicar Descuento';
+                validateBtn.disabled = false;
+            }, 1500);
+        }
+
+        function showValidResult(credential, commerce) {
+            const resultContainer = document.getElementById('resultContainer');
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            resultContainer.className = 'result-container result-valid';
+            resultContainer.style.display = 'block';
+            
+            resultIcon.textContent = '✅';
+            resultTitle.textContent = '¡Credencial Válida!';
+            
+            resultMessage.innerHTML = `
+                <strong>🎉 Descuento ${commerce.discount}% confirmado</strong><br>
+                Comercio: <strong>${commerce.name}</strong><br>
+                Esta credencial es auténtica y está activa para usar beneficios.
+            `;
+            
+            showCredentialDetails(credential, commerce);
+        }
+
+        function showWarningResult(credential, commerce, daysUntilExpiry) {
+            const resultContainer = document.getElementById('resultContainer');
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            resultContainer.className = 'result-container result-warning';
+            resultContainer.style.display = 'block';
+            
+            resultIcon.textContent = '⚠️';
+            resultTitle.textContent = 'Credencial Válida - Próxima a Vencer';
+            
+            resultMessage.innerHTML = `
+                <strong>🎉 Descuento ${commerce.discount}% aplicable</strong><br>
+                Comercio: <strong>${commerce.name}</strong><br>
+                ⚠️ <strong>Atención:</strong> Esta credencial vence en ${daysUntilExpiry} días.<br>
+                Recuerda al estudiante renovar su credencial pronto.
+            `;
+            
+            showCredentialDetails(credential, commerce);
+        }
+
+        function showInvalidResult(title, message) {
+            const resultContainer = document.getElementById('resultContainer');
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            const credentialDetails = document.getElementById('credentialDetails');
+            
+            resultContainer.className = 'result-container result-invalid';
+            resultContainer.style.display = 'block';
+            
+            resultIcon.textContent = '❌';
+            resultTitle.textContent = title;
+            resultMessage.textContent = message;
+            
+            credentialDetails.style.display = 'none';
+        }
+
+        function showCredentialDetails(credential, commerce) {
+            const credentialDetails = document.getElementById('credentialDetails');
+            const daysUntilExpiry = getDaysUntilExpiry(credential);
+            
+            credentialDetails.innerHTML = `
+                <h4 style="color: #d4af37; margin-bottom: 15px; text-align: center;">📄 Detalles de la Credencial Verificada</h4>
+                <div class="detail-row">
+                    <span class="detail-label">Nombre Completo:</span>
+                    <span class="detail-value">${credential.nombre}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">RUT:</span>
+                    <span class="detail-value">${credential.rut}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Curso:</span>
+                    <span class="detail-value">${credential.curso}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Válido Desde:</span>
+                    <span class="detail-value">${credential.validoDesde}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Válido Hasta:</span>
+                    <span class="detail-value">${credential.validoHasta}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Días Restantes:</span>
+                    <span class="detail-value" style="color: ${daysUntilExpiry > 30 ? '#2ecc71' : '#f1c40f'}">
+                        ${daysUntilExpiry} días
+                    </span>
+                </div>
+                <div class="detail-row" style="background: rgba(46, 204, 113, 0.1); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <span class="detail-label">Descuento Aplicable:</span>
+                    <span class="detail-value" style="color: #2ecc71; font-weight: bold; font-size: 1.2em;">
+                        ${commerce.discount}% en ${commerce.name}
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Validación:</span>
+                    <span class="detail-value">${new Date().toLocaleString('es-CL')}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Origen de Datos:</span>
+                    <span class="detail-value" style="color: #2ecc71;">Firebase Cloud ☁️</span>
+                </div>
+            `;
+            credentialDetails.style.display = 'block';
+        }
+
+        function recordValidationToFirebase(credentialId, commerce, credential) {
+            if (!isFirebaseConnected) return;
+
+            const validationData = {
+                id: 'VAL' + Date.now() + Math.floor(Math.random() * 100),
+                credentialId: credentialId,
+                commerceCode: commerce.code,
+                commerceName: commerce.name,
+                studentName: credential.nombre,
+                studentRut: credential.rut,
+                course: credential.curso,
+                discount: commerce.discount,
+                timestamp: Date.now(),
+                date: new Date().toLocaleDateString('es-CL'),
+                time: new Date().toLocaleTimeString('es-CL')
+            };
+            
+            // Guardar en Firebase
+            db.ref('validaciones/' + validationData.id).set(validationData)
+                .then(() => {
+                    console.log('✅ Validación guardada en Firebase:', validationData);
+                })
+                .catch((error) => {
+                    console.error('❌ Error guardando validación:', error);
+                });
+        }
+
+        function updateValidationHistory() {
+            const historySection = document.getElementById('validationHistory');
+            const historyList = document.getElementById('historyList');
+            
+            if (!historySection || !historyList) return;
+            
+            const recentValidations = validationsData.slice(-5).reverse();
+            
+            if (recentValidations.length === 0) {
+                historySection.style.display = 'none';
+                return;
+            }
+            
+            historyList.innerHTML = recentValidations.map(validation => `
+                <div class="validation-item">
+                    <div class="validation-time">${validation.date} ${validation.time}</div>
+                    <div class="validation-details">
+                        <strong>${validation.studentName}</strong> - ${validation.commerceName}<br>
+                        Descuento: ${validation.discount}% | ID: <code>${validation.credentialId}</code>
+                    </div>
+                </div>
+            `).join('');
+            
+            historySection.style.display = 'block';
+        }
+
+        // Event listeners
+        document.getElementById('commerceCode').addEventListener('input', function(e) {
+            let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            e.target.value = value;
+            clearError('commerce');
+        });
+
+        document.getElementById('credentialId').addEventListener('input', function(e) {
+            let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            
+            if (value.length > 0 && !value.startsWith('MM')) {
+                value = 'MM' + value.replace(/^MM/, '');
+            }
+            
+            e.target.value = value;
+            clearError('credential');
+        });
+
+        // Permitir validación con Enter
+        document.getElementById('credentialId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                validateCredential();
+            }
+        });
+
+        document.getElementById('commerceCode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                validateCredential();
+            }
+        });
+
+        // Función para limpiar formulario
+        function clearForm() {
+            document.getElementById('credentialId').value = '';
+            document.getElementById('commerceCode').value = '';
+            clearAllErrors();
+            document.getElementById('resultContainer').style.display = 'none';
+        }
+
+        // Atajos de teclado
+        document.addEventListener('keydown', function(e) {
+            // Ctrl + Enter para validar
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                validateCredential();
+            }
+            
+            // Escape para limpiar formulario
+            if (e.key === 'Escape') {
+                clearForm();
+            }
+        });
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                updateLiveStats();
+                
+                console.log('✅ Validador de Credenciales Master Móvil v3.0 - Firebase Edition');
+                console.log('🔥 Conectado a Firebase Cloud Database');
+                console.log('🌐 Datos sincronizados en tiempo real');
+                console.log('🛡️ Sistema de validación seguro con códigos únicos');
+                
+                // Actualizar stats cada 30 segundos
+                setInterval(() => {
+                    if (isFirebaseConnected) {
+                        document.getElementById('liveLastUpdate').textContent = new Date().toLocaleTimeString('es-CL');
+                    }
+                }, 30000);
+                
+            } catch (error) {
+                console.error('Error en inicialización:', error);
+            }
+        });
+
+        // Exponer funciones para debugging
+        window.MasterMovilValidatorFirebase = {
+            getCredentials: () => credentialsData,
+            getCommerces: () => commercesData,
+            getValidations: () => validationsData,
+            checkConnection: () => isFirebaseConnected,
+            clearForm: clearForm
+        };
+    </script>
+</body>
+</html>

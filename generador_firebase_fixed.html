@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Credenciales - Master Móvil</title>
+    
+    <!-- Firebase SDK v8 (Compatible) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .connection-status {
+            background: rgba(46, 204, 113, 0.1);
+            border: 2px solid #2ecc71;
+            color: #2ecc71;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-top: 15px;
+            display: inline-block;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(231, 76, 60, 0.1);
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            padding: 40px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-section h2 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+            font-weight: 400;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input.error {
+            border-color: #e74c3c;
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .credential-preview {
+            position: sticky;
+            top: 20px;
+        }
+
+        .credential {
+            width: 100%;
+            max-width: 400px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 20px;
+            padding: 30px;
+            color: #d4af37;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto;
+            border: 2px solid #d4af37;
+        }
+
+        .credential::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: rgba(212, 175, 55, 0.1);
+            transform: rotate(45deg);
+        }
+
+        .credential-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo-left, .logo-right {
+            width: 80px;
+            height: 80px;
+            background: transparent;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #d4af37;
+            font-size: 10px;
+            text-align: center;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .credential-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #d4af37;
+        }
+
+        .credential-subtitle {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 400;
+            color: #d4af37;
+            opacity: 0.8;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .credential-body {
+            position: relative;
+            z-index: 2;
+        }
+
+        .field {
+            margin-bottom: 15px;
+        }
+
+        .field-label {
+            font-size: 12px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .field-value {
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 2px solid rgba(212, 175, 55, 0.5);
+            padding-bottom: 5px;
+            color: #d4af37;
+            word-break: break-word;
+        }
+
+        .rut-field {
+            background: rgba(212, 175, 55, 0.2);
+            padding: 10px 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #d4af37;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .website-link {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            font-size: 14px;
+            color: #d4af37;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .validity {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(212, 175, 55, 0.2);
+            border-radius: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .validity-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+            color: #d4af37;
+        }
+
+        .validity-date {
+            font-size: 16px;
+            font-weight: 600;
+            color: #d4af37;
+        }
+
+        .credential-id {
+            text-align: center;
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(212, 175, 55, 0.2);
+            border-radius: 8px;
+            font-size: 14px;
+            color: #d4af37;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+            font-weight: bold;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .validation-text {
+            font-size: 9px;
+            color: #d4af37;
+            opacity: 0.7;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .stats-section {
+            background: rgba(212, 175, 55, 0.1);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 15px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .stats-title {
+            color: #d4af37;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: rgba(212, 175, 55, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #d4af37;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: rgba(212, 175, 55, 0.8);
+            margin-top: 5px;
+        }
+
+        .active-stat .stat-number {
+            color: #2ecc71;
+        }
+
+        .inactive-stat .stat-number {
+            color: #e74c3c;
+        }
+
+        .download-section {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .download-btn {
+            padding: 12px 30px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+
+        .download-btn:hover:not(:disabled) {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .download-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+        }
+
+        .notification.success {
+            background: #2ecc71;
+        }
+
+        .notification.error {
+            background: #e74c3c;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Generador de Credenciales Digitales</h1>
+            <p>Sistema integrado Master Móvil - Firebase Cloud</p>
+            <div class="connection-status" id="connectionStatus">
+                🔄 Conectando a Firebase...
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="form-section">
+                <h2>📝 Datos de la Credencial</h2>
+                <form id="credentialForm">
+                    <div class="form-group">
+                        <label for="fullName">Nombre Completo *</label>
+                        <input type="text" id="fullName" placeholder="Ej: Juan Pérez González" required>
+                        <div class="error-message" id="fullNameError">Ingresa un nombre válido (mínimo 5 caracteres)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rut">RUT *</label>
+                        <input type="text" id="rut" placeholder="12.345.678-9" required maxlength="12">
+                        <div class="error-message" id="rutError">Formato de RUT inválido</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="course">Curso *</label>
+                        <input type="text" id="course" placeholder="Ej: Licencia Clase B, Licencia Clase A2, Renovación, Curso Teórico..." required>
+                        <div class="error-message" id="courseError">Ingresa un curso válido (mínimo 3 caracteres)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="validFrom">Válido Desde *</label>
+                        <input type="date" id="validFrom" required>
+                        <div class="error-message" id="validFromError">Selecciona una fecha válida</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="validUntil">Válido Hasta *</label>
+                        <input type="date" id="validUntil" required>
+                        <div class="error-message" id="validUntilError">La fecha debe ser posterior a "Válido Desde"</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="credentialId">ID de Credencial (Auto-generado)</label>
+                        <input type="text" id="credentialId" readonly style="background: #f0f0f0; color: #666;">
+                    </div>
+
+                    <button type="submit" class="generate-btn" id="generateBtn">
+                        ✨ Generar y Guardar en Firebase
+                    </button>
+                </form>
+            </div>
+
+            <div class="credential-preview">
+                <div class="credential" id="credential">
+                    <div class="credential-header">
+                        <div class="logo-left">
+                            <div>Club</div>
+                            <div>Máster+</div>
+                        </div>
+                        <div>
+                            <div class="credential-title">Club Member</div>
+                            <div class="credential-subtitle">Credencial Alumno</div>
+                        </div>
+                        <div class="logo-right">
+                            <div>Máster</div>
+                            <div>Móvil</div>
+                        </div>
+                    </div>
+
+                    <div class="credential-body">
+                        <div class="field">
+                            <div class="field-label">Nombre Completo</div>
+                            <div class="field-value" id="displayName">Juan Pérez González</div>
+                        </div>
+
+                        <div class="rut-field">
+                            <div id="displayRut">12.345.678-9</div>
+                        </div>
+
+                        <div class="field">
+                            <div class="field-label">Curso</div>
+                            <div class="field-value" id="displayCourse">Licencia Clase B</div>
+                        </div>
+
+                        <div class="website-link">
+                            www.mastermovil.cl
+                        </div>
+
+                        <div class="validity">
+                            <div class="validity-label">Vigencia</div>
+                            <div class="validity-date">
+                                <span id="displayValidFrom">01/01/2024</span> - <span id="displayValidUntil">31/12/2024</span>
+                            </div>
+                        </div>
+
+                        <div class="credential-id" id="displayCredentialId">
+                            MM250805001
+                        </div>
+                        <div class="validation-text">
+                            Validar con este ID en mastermovil.cl/validador
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <div class="stats-title">📊 Estadísticas del Sistema</div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalCredentials">0</span>
+                            <div class="stat-label">Total Generadas</div>
+                        </div>
+                        <div class="stat-item active-stat">
+                            <span class="stat-number" id="activeCredentials">0</span>
+                            <div class="stat-label">Activas</div>
+                        </div>
+                        <div class="stat-item inactive-stat">
+                            <span class="stat-number" id="inactiveCredentials">0</span>
+                            <div class="stat-label">Inactivas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="download-section">
+                    <button class="download-btn" onclick="downloadCredential()" id="downloadBtn">
+                        💾 Descargar PNG
+                    </button>
+                    <button class="download-btn" onclick="copyCredentialData()" style="background: #3498db;">
+                        📋 Copiar Datos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        // 🔥 CONFIGURACIÓN FIREBASE - TU PROYECTO REAL
+        const firebaseConfig = {
+            apiKey: "AIzaSyAUM0tIPiCfcEnLbcK8JPZMBBIpY89wlV0",
+            authDomain: "master-movil-credenciales.firebaseapp.com",
+            databaseURL: "https://master-movil-credenciales-default-rtdb.firebaseio.com",
+            projectId: "master-movil-credenciales",
+            storageBucket: "master-movil-credenciales.firebasestorage.app",
+            messagingSenderId: "30682645748",
+            appId: "1:30682645748:web:7318cb15d2baa87f6b0aa1"
+        };
+
+        // Inicializar Firebase
+        let db;
+        let isFirebaseConnected = false;
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            isFirebaseConnected = true;
+            updateConnectionStatus(true);
+            console.log('✅ Firebase conectado correctamente');
+        } catch (error) {
+            console.error('❌ Error conectando Firebase:', error);
+            updateConnectionStatus(false);
+        }
+
+        // Estado de la aplicación
+        let isFormValid = false;
+        let currentCredentialId = '';
+
+        // Funciones de Firebase
+        function saveCredentialToFirebase(id, data) {
+            if (!isFirebaseConnected) {
+                showNotification('Error: No hay conexión con Firebase', 'error');
+                return Promise.resolve(false);
+            }
+
+            return db.ref('credenciales/' + id).set({
+                ...data,
+                fechaEmision: new Date().toLocaleDateString('es-CL'),
+                estado: 'Activa',
+                timestamp: Date.now()
+            }).then(() => {
+                console.log('✅ Credencial guardada en Firebase:', id);
+                return true;
+            }).catch((error) => {
+                console.error('❌ Error guardando en Firebase:', error);
+                showNotification('Error al guardar en Firebase: ' + error.message, 'error');
+                return false;
+            });
+        }
+
+        function loadCredentialsFromFirebase() {
+            if (!isFirebaseConnected) return;
+
+            db.ref('credenciales').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    updateStats(data);
+                    console.log('📊 Estadísticas actualizadas desde Firebase');
+                }
+            }, (error) => {
+                console.error('❌ Error cargando datos:', error);
+            });
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.textContent = '🟢 Conectado a Firebase Cloud';
+                statusElement.className = 'connection-status';
+            } else {
+                statusElement.textContent = '🔴 Sin conexión a Firebase';
+                statusElement.className = 'connection-status disconnected';
+            }
+        }
+
+        // Funciones mejoradas para generar ID único
+        function generateCredentialId() {
+            const now = new Date();
+            const year = String(now.getFullYear()).slice(-2);
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const timestamp = now.getTime().toString().slice(-3);
+            
+            return `MM${year}${month}${day}${timestamp}`;
+        }
+
+        // Funciones de validación
+        function validateRut(rut) {
+            const cleaned = rut.replace(/[^0-9kK]/g, '');
+            if (cleaned.length < 8 || cleaned.length > 9) return false;
+            
+            const body = cleaned.slice(0, -1);
+            const dv = cleaned.slice(-1).toUpperCase();
+            
+            let sum = 0;
+            let factor = 2;
+            
+            for (let i = body.length - 1; i >= 0; i--) {
+                sum += parseInt(body[i]) * factor;
+                factor = factor === 7 ? 2 : factor + 1;
+            }
+            
+            const calculatedDv = 11 - (sum % 11);
+            const expectedDv = calculatedDv === 11 ? '0' : calculatedDv === 10 ? 'K' : calculatedDv.toString();
+            
+            return dv === expectedDv;
+        }
+
+        function formatRut(rut) {
+            const cleaned = rut.replace(/[^\dkK]/g, '');
+            if (cleaned.length < 2) return cleaned;
+            
+            const body = cleaned.slice(0, -1);
+            const dv = cleaned.slice(-1);
+            
+            const formattedBody = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            return `${formattedBody}-${dv.toUpperCase()}`;
+        }
+
+        function validateName(name) {
+            return name.trim().length >= 5 && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim());
+        }
+
+        function validateDates(fromDate, untilDate) {
+            const from = new Date(fromDate);
+            const until = new Date(untilDate);
+            const today = new Date();
+            
+            return from <= until && until > today;
+        }
+
+        // Funciones de interfaz
+        function showNotification(message, type = 'success') {
+            const existing = document.querySelector('.notification');
+            if (existing) existing.remove();
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function showError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            const error = document.getElementById(fieldId + 'Error');
+            
+            if (field) field.classList.add('error');
+            if (error) {
+                error.textContent = message;
+                error.style.display = 'block';
+            }
+        }
+
+        function clearError(fieldId) {
+            const field = document.getElementById(fieldId);
+            const error = document.getElementById(fieldId + 'Error');
+            
+            if (field) field.classList.remove('error');
+            if (error) error.style.display = 'none';
+        }
+
+        function clearAllErrors() {
+            const errorFields = ['fullName', 'rut', 'course', 'validFrom', 'validUntil'];
+            errorFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                const error = document.getElementById(fieldId + 'Error');
+                
+                if (field) field.classList.remove('error');
+                if (error) error.style.display = 'none';
+            });
+        }
+
+        // Validación en tiempo real
+        function validateForm() {
+            clearAllErrors();
+            let valid = true;
+            
+            const name = document.getElementById('fullName').value.trim();
+            const rut = document.getElementById('rut').value;
+            const course = document.getElementById('course').value.trim();
+            const validFrom = document.getElementById('validFrom').value;
+            const validUntil = document.getElementById('validUntil').value;
+            
+            if (!validateName(name)) {
+                showError('fullName', 'Ingresa un nombre válido (mínimo 5 caracteres, solo letras)');
+                valid = false;
+            }
+            
+            if (!validateRut(rut)) {
+                showError('rut', 'RUT inválido. Verifica el formato y dígito verificador');
+                valid = false;
+            }
+            
+            if (!course || course.length < 3) {
+                showError('course', 'Ingresa un curso válido (mínimo 3 caracteres)');
+                valid = false;
+            }
+            
+            if (!validFrom) {
+                showError('validFrom', 'Selecciona fecha de inicio');
+                valid = false;
+            }
+            
+            if (!validUntil) {
+                showError('validUntil', 'Selecciona fecha de vencimiento');
+                valid = false;
+            } else if (validFrom && !validateDates(validFrom, validUntil)) {
+                showError('validUntil', 'La fecha debe ser posterior a la fecha de inicio y futura');
+                valid = false;
+            }
+            
+            isFormValid = valid;
+            const generateBtn = document.getElementById('generateBtn');
+            if (generateBtn) generateBtn.disabled = !valid;
+            
+            return valid;
+        }
+
+        // Actualización en tiempo real de la vista previa
+        function updatePreview() {
+            const nameElement = document.getElementById('displayName');
+            const rutElement = document.getElementById('displayRut');
+            const courseElement = document.getElementById('displayCourse');
+            const validFromElement = document.getElementById('displayValidFrom');
+            const validUntilElement = document.getElementById('displayValidUntil');
+            
+            const name = document.getElementById('fullName').value.trim() || 'Juan Pérez González';
+            const rut = document.getElementById('rut').value || '12.345.678-9';
+            const course = document.getElementById('course').value.trim() || 'Licencia Clase B';
+            const validFrom = document.getElementById('validFrom').value;
+            const validUntil = document.getElementById('validUntil').value;
+            
+            if (nameElement) nameElement.textContent = name;
+            if (rutElement) rutElement.textContent = rut;
+            if (courseElement) courseElement.textContent = course;
+            
+            if (validFrom && validFromElement) {
+                validFromElement.textContent = formatDate(validFrom);
+            }
+            
+            if (validUntil && validUntilElement) {
+                validUntilElement.textContent = formatDate(validUntil);
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-CL');
+        }
+
+        function updateStats(firebaseData = null) {
+            let credentials = {};
+            
+            if (firebaseData) {
+                credentials = firebaseData;
+            }
+            
+            const credentialValues = Object.values(credentials);
+            const total = credentialValues.length;
+            const active = credentialValues.filter(c => c.estado === 'Activa').length;
+            const inactive = total - active;
+
+            const totalElement = document.getElementById('totalCredentials');
+            const activeElement = document.getElementById('activeCredentials');
+            const inactiveElement = document.getElementById('inactiveCredentials');
+
+            if (totalElement) totalElement.textContent = total;
+            if (activeElement) activeElement.textContent = active;
+            if (inactiveElement) inactiveElement.textContent = inactive;
+        }
+
+        // Event listeners
+        document.getElementById('fullName').addEventListener('input', function(e) {
+            updatePreview();
+            validateForm();
+        });
+
+        document.getElementById('rut').addEventListener('input', function(e) {
+            const formatted = formatRut(e.target.value);
+            e.target.value = formatted;
+            updatePreview();
+            validateForm();
+        });
+
+        document.getElementById('course').addEventListener('input', function(e) {
+            const courseElement = document.getElementById('displayCourse');
+            if (courseElement) {
+                courseElement.textContent = e.target.value || 'Licencia Clase B';
+            }
+            validateForm();
+        });
+
+        document.getElementById('validFrom').addEventListener('change', function(e) {
+            updatePreview();
+            validateForm();
+            
+            const validUntilField = document.getElementById('validUntil');
+            if (e.target.value && !validUntilField.value) {
+                const from = new Date(e.target.value);
+                const until = new Date(from.getFullYear() + 1, from.getMonth(), from.getDate());
+                validUntilField.value = until.toISOString().split('T')[0];
+                updatePreview();
+            }
+        });
+
+        document.getElementById('validUntil').addEventListener('change', function(e) {
+            updatePreview();
+            validateForm();
+        });
+
+        // Manejo del formulario
+        document.getElementById('credentialForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!validateForm()) {
+                showNotification('Por favor corrige los errores antes de continuar', 'error');
+                return;
+            }
+
+            if (!isFirebaseConnected) {
+                showNotification('Error: No hay conexión con Firebase', 'error');
+                return;
+            }
+            
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.textContent = '⏳ Guardando en Firebase...';
+            generateBtn.disabled = true;
+            
+            try {
+                const credentialId = generateCredentialId();
+                currentCredentialId = credentialId;
+                
+                // Actualizar ID en la vista
+                const credentialIdField = document.getElementById('credentialId');
+                const displayCredentialIdElement = document.getElementById('displayCredentialId');
+                
+                if (credentialIdField) credentialIdField.value = credentialId;
+                if (displayCredentialIdElement) displayCredentialIdElement.textContent = credentialId;
+                
+                // Preparar datos para guardar
+                const credentialData = {
+                    nombre: document.getElementById('fullName').value.trim(),
+                    rut: document.getElementById('rut').value,
+                    curso: document.getElementById('course').value.trim(),
+                    validoDesde: formatDate(document.getElementById('validFrom').value),
+                    validoHasta: formatDate(document.getElementById('validUntil').value)
+                };
+                
+                // Guardar en Firebase
+                const success = await saveCredentialToFirebase(credentialId, credentialData);
+                
+                if (success) {
+                    showNotification('¡Credencial guardada en Firebase exitosamente!', 'success');
+                    
+                    generateBtn.textContent = '✅ ¡Guardada en la Nube!';
+                    generateBtn.style.background = '#27ae60';
+                    
+                    // Restaurar botón después de 3 segundos
+                    setTimeout(() => {
+                        generateBtn.textContent = '✨ Generar y Guardar en Firebase';
+                        generateBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                        generateBtn.disabled = false;
+                        
+                        // Limpiar formulario para nueva credencial
+                        document.getElementById('credentialForm').reset();
+                        currentCredentialId = '';
+                        if (credentialIdField) credentialIdField.value = '';
+                        updatePreview();
+                        validateForm();
+                    }, 3000);
+                } else {
+                    generateBtn.textContent = '✨ Generar y Guardar en Firebase';
+                    generateBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error en proceso de guardado:', error);
+                showNotification('Error inesperado: ' + error.message, 'error');
+                generateBtn.textContent = '✨ Generar y Guardar en Firebase';
+                generateBtn.disabled = false;
+            }
+        });
+
+        // Funciones de descarga
+        async function downloadCredential() {
+            if (!currentCredentialId) {
+                showNotification('Primero genera una credencial válida', 'error');
+                return;
+            }
+            
+            const credential = document.getElementById('credential');
+            const downloadBtn = document.getElementById('downloadBtn');
+            
+            downloadBtn.textContent = '⏳ Generando imagen...';
+            downloadBtn.disabled = true;
+            
+            try {
+                const canvas = await html2canvas(credential, {
+                    backgroundColor: null,
+                    scale: 3,
+                    useCORS: true,
+                    allowTaint: false,
+                    logging: false,
+                    width: credential.offsetWidth,
+                    height: credential.offsetHeight
+                });
+                
+                const link = document.createElement('a');
+                const name = document.getElementById('displayName').textContent.replace(/\s+/g, '_').toLowerCase();
+                const fileName = `credencial_${name}_${currentCredentialId}.png`;
+                
+                link.download = fileName;
+                link.href = canvas.toDataURL('image/png', 1.0);
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showNotification('Credencial descargada exitosamente', 'success');
+                
+            } catch (error) {
+                console.error('Error al generar imagen:', error);
+                showNotification('Error al generar la imagen', 'error');
+            } finally {
+                downloadBtn.textContent = '💾 Descargar PNG';
+                downloadBtn.disabled = false;
+            }
+        }
+
+        function copyCredentialData() {
+            if (!currentCredentialId) {
+                showNotification('Primero genera una credencial válida', 'error');
+                return;
+            }
+            
+            const data = {
+                id: currentCredentialId,
+                nombre: document.getElementById('displayName').textContent,
+                rut: document.getElementById('displayRut').textContent,
+                curso: document.getElementById('displayCourse').textContent,
+                validoDesde: document.getElementById('displayValidFrom').textContent,
+                validoHasta: document.getElementById('displayValidUntil').textContent,
+                url_validacion: `https://tu-sitio.netlify.app/validador.html?id=${currentCredentialId}`
+            };
+            
+            const textToCopy = `
+🎓 CREDENCIAL DIGITAL - MASTER MÓVIL
+═══════════════════════════════════════
+
+📋 ID: ${data.id}
+👤 Nombre: ${data.nombre}
+🆔 RUT: ${data.rut}
+📚 Curso: ${data.curso}
+📅 Vigencia: ${data.validoDesde} - ${data.validoHasta}
+
+🔗 Validar en: ${data.url_validacion}
+🌐 Sitio web: https://mastermovil.cl
+
+═══════════════════════════════════════
+Sistema Master Móvil © ${new Date().getFullYear()}
+            `.trim();
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showNotification('Datos copiados al portapapeles', 'success');
+                }).catch(() => {
+                    fallbackCopyText(textToCopy);
+                });
+            } else {
+                fallbackCopyText(textToCopy);
+            }
+        }
+
+        function fallbackCopyText(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showNotification('Datos copiados al portapapeles', 'success');
+            } catch (err) {
+                showNotification('No se pudo copiar. Usa Ctrl+C manualmente', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        // Inicialización del sistema
+        function initializeSystem() {
+            try {
+                const today = new Date();
+                const nextYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
+                
+                const validFromField = document.getElementById('validFrom');
+                const validUntilField = document.getElementById('validUntil');
+                const displayValidFromElement = document.getElementById('displayValidFrom');
+                const displayValidUntilElement = document.getElementById('displayValidUntil');
+                const displayCredentialIdElement = document.getElementById('displayCredentialId');
+                
+                if (validFromField) {
+                    validFromField.value = today.toISOString().split('T')[0];
+                }
+                if (validUntilField) {
+                    validUntilField.value = nextYear.toISOString().split('T')[0];
+                }
+                
+                if (displayValidFromElement) {
+                    displayValidFromElement.textContent = formatDate(today.toISOString().split('T')[0]);
+                }
+                if (displayValidUntilElement) {
+                    displayValidUntilElement.textContent = formatDate(nextYear.toISOString().split('T')[0]);
+                }
+                
+                const sampleId = generateCredentialId();
+                if (displayCredentialIdElement) {
+                    displayCredentialIdElement.textContent = sampleId;
+                }
+                
+                updatePreview();
+                updateStats();
+                validateForm();
+                
+                // Cargar datos de Firebase
+                if (isFirebaseConnected) {
+                    loadCredentialsFromFirebase();
+                }
+                
+                console.log('✅ Sistema de credenciales inicializado correctamente');
+            } catch (error) {
+                console.error('Error en inicialización:', error);
+            }
+        }
+
+        // Atajos de teclado
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                if (isFormValid) {
+                    document.getElementById('credentialForm').dispatchEvent(new Event('submit'));
+                }
+            }
+            
+            if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                if (currentCredentialId) {
+                    downloadCredential();
+                }
+            }
+        });
+
+        // Event listeners principales
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                initializeSystem();
+                
+                console.log('✅ Generador de Credenciales Master Móvil v3.0 - Firebase Edition');
+                console.log('🔥 Conectado a Firebase Cloud Database');
+                console.log('🌐 Sincronización en tiempo real habilitada');
+            } catch (error) {
+                console.error('Error en inicialización del DOM:', error);
+            }
+        });
+
+        // Exponer funciones para debugging
+        window.MasterMovilFirebase = {
+            generateId: generateCredentialId,
+            validateRut: validateRut,
+            checkConnection: () => isFirebaseConnected,
+            testSave: (id, data) => saveCredentialToFirebase(id, data)
+        };
+    </script>
+</body>
+</html>
